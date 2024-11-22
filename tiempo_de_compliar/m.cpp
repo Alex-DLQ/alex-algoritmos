@@ -1,128 +1,116 @@
-#include <bits/stdc++.h>
-#include <chrono>
 #include <iostream>
 #include <fstream>
-#include <cstdlib>
-#include <string>
-#include <sstream>
 #include <vector>
 #include <cmath>
-#include <iomanip>  // Para controlar la precisión en la impresión de números decimales
+#include <chrono>
+#include <iomanip>
+#include <limits>
 using namespace std;
 
-// Función para realizar Jump Search
+// Jump Search
 int jumpSearch(const vector<float>& arr, float x, int n) {
-    int paso = sqrt(n);
-    int prev = 0;
+    int paso = sqrt(n), prev = 0;
 
     while (arr[min(paso, n) - 1] < x) {
         prev = paso;
         paso += sqrt(n);
-        if (prev >= n)
-            return -1; // Elemento no encontrado
+        if (prev >= n) return -1;
     }
 
     while (arr[prev] < x) {
         prev++;
-        if (prev == min(paso, n))
-            return -1; // Elemento no encontrado
+        if (prev == min(paso, n)) return -1;
     }
 
-    if (arr[prev] == x)
-        return prev;
-
-    return -1;
+    return arr[prev] == x ? prev : -1;
 }
 
-// Función para intercambiar dos valores
-void intercambio(float &x, float &y) {
-    float aux = x;
-    x = y;
-    y = aux;
-}
-
-// Función QuickSort
-void arreglo(vector<float>& a, int primero, int ultimo) {
-    int i, j, central;
-    float pivote;
-
-    central = (primero + ultimo) / 2;
-    pivote = a[central];
-    i = primero;
-    j = ultimo;
-
-    do {
-        while (a[i] < pivote) i++;
-        while (a[j] > pivote) j--;
-        if (i <= j) {
-            intercambio(a[i], a[j]);
-            i++;
-            j--;
-        }
-    } while (i <= j);
-
-    if (primero < j) arreglo(a, primero, j);
-    if (i < ultimo) arreglo(a, i, ultimo);
+// QuickSort
+void quickSort(vector<float>& arr, int primero, int ultimo) {
+    if (primero >= ultimo) return;
+    int i = primero, j = ultimo;
+    float pivote = arr[(primero + ultimo) / 2];
+    while (i <= j) {
+        while (arr[i] < pivote) i++;
+        while (arr[j] > pivote) j--;
+        if (i <= j) swap(arr[i], arr[j]), i++, j--;
+    }
+    quickSort(arr, primero, j);
+    quickSort(arr, i, ultimo);
 }
 
 int main() {
-    ifstream archivo;
-    string frase;
-    float x;
-    
-    // Usamos un vector dinámico para manejar el tamaño de manera más flexible
-    vector<float> arr;
-    
     // Abrir el archivo
-    archivo.open("C://doc//numeros_aleatorios.txt", ios::in);
-    if (archivo.fail()) {
+    ifstream archivo("C://doc//numeros_aleatorios.txt");
+    if (!archivo) {
         cout << "Error al abrir el archivo." << endl;
         return 1;
     }
 
-    // Leer los números del archivo
-    while (getline(archivo, frase)) {
-        // Convertir cada línea en un número decimal (float)
-        arr.push_back(stof(frase));  // Usa stof para convertir a float
-    }
+    vector<float> arr;
+    for (string linea; getline(archivo, linea); arr.push_back(stof(linea)));
     archivo.close();
 
-    // Obtener el tamaño del vector
-    int n = arr.size();
+    // Ordenar el vector
+    quickSort(arr, 0, arr.size() - 1);
 
-    // Ordenar el arreglo
-    arreglo(arr, 0, n - 1);
+    // Solicitar la cantidad de números a buscar
+    int n;
+    cout << "Cuantos numeros deseas buscar? ";
+    cin >> n;
 
-    // Solicitar el número a buscar
-    cout << "Dime qué número deseas buscar: ";
-    cin >> x;
+    vector<float> numeros_a_buscar(n);
+    cout << "Introduce " << n << " numeros a buscar:\n";
+    for (int i = 0; i < n; ++i) {
+        cin >> numeros_a_buscar[i];
+    }
 
-    // Iniciar el cronómetro antes de llamar a Jump Search
-    auto start_time = chrono::high_resolution_clock::now();
-    
-    // Buscar el índice de 'x' usando Jump Search
-    int indice = jumpSearch(arr, x, n);  // Usar el tamaño real del arreglo
+    // Inicializar variables para tiempos mínimo y máximo
+    double tiempo_minimo = numeric_limits<double>::max();
+    double tiempo_maximo = numeric_limits<double>::lowest();
+    float num_minimo = 0, num_maximo = 0;
 
-    // Finalizar el cronómetro después de ejecutar Jump Search
-    auto end_time = chrono::high_resolution_clock::now();
+    int repeticiones = 1000; // Repetir cada búsqueda para calcular tiempos promedio
 
-    // Calcular el tiempo de ejecución
-    chrono::duration<double> execution_time = end_time - start_time;
+    for (int i = 0; i < n; ++i) {
+        float x = numeros_a_buscar[i];
+        double total_tiempo = 0;
 
-    // Imprimir el índice del elemento y el tiempo de ejecución
-    if (indice != -1)
-        cout << "\nEl número " << x << " está en el índice " << indice << endl;
-    else
-        cout << "\nEl número " << x << " no se encuentra en el arreglo." << endl;
+        for (int j = 0; j < repeticiones; ++j) {
+            auto start_time = chrono::high_resolution_clock::now();
+            jumpSearch(arr, x, arr.size());
+            auto end_time = chrono::high_resolution_clock::now();
 
-    // Usar fixed y setprecision para mostrar más decimales en el tiempo de ejecución
-    cout << fixed << setprecision(10); // 10 decimales
-    cout << "Tiempo de ejecución de Jump Search: " 
-         << execution_time.count() << " segundos" << endl;
+            chrono::duration<double, std::micro> execution_time_micro = end_time - start_time;
+            total_tiempo += execution_time_micro.count();
+        }
+
+        // Calcular tiempo promedio
+        double tiempo_promedio = total_tiempo / repeticiones;
+
+        // Actualizar tiempos mínimos y máximos
+        if (tiempo_promedio < tiempo_minimo) {
+            tiempo_minimo = tiempo_promedio;
+            num_minimo = x;
+        }
+        if (tiempo_promedio > tiempo_maximo) {
+            tiempo_maximo = tiempo_promedio;
+            num_maximo = x;
+        }
+
+        // Mostrar resultados para cada número
+        cout << "\nNumero " << fixed << setprecision(0) << x << " encontrado con tiempo de ejecucion promedio: "
+             << fixed << setprecision(10)
+             << tiempo_promedio << " microsegundos" << endl;
+    }
+
+    // Mostrar resultados finales
+    cout << "\nNumero con el menor tiempo de busqueda: " << fixed << setprecision(0) << num_minimo
+         << " con tiempo de " << fixed << setprecision(10) << tiempo_minimo << " microsegundos" << endl;
+
+    cout << "Numero con el mayor tiempo de busqueda: " << fixed << setprecision(0) << num_maximo
+         << " con tiempo de " << fixed << setprecision(10) << tiempo_maximo << " microsegundos" << endl;
 
     return 0;
 }
-
-
-
 
